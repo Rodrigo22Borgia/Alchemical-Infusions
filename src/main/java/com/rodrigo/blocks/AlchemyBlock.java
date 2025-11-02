@@ -74,20 +74,16 @@ public class AlchemyBlock extends BlockWithEntity  {
             return brewPotion(entity, world, pos, state);
         }
 
-        int i = switch ((int) (hit.getPos().y % 1 * 1000)) {
-            case 281 -> 0;
-            case 62 -> 1;
-            case 56 -> 2;
-            case 50 -> 3;
-            default -> 4;
-        };
-        AlchemicalInfusions.LOGGER.info(String.valueOf(hit.getPos().y % 1 * 1000));
-        if (i == 4) {
-            return ActionResult.PASS;
+        final ItemStack inHand = player.getMainHandStack();
+        int i;
+        switch ((int) (hit.getPos().y % 1 * 1000)) {
+            case 281-> {i = 0; world.setBlockState(pos, state.with(BREW , !inHand.isEmpty()));}
+            case 62 -> {i = 1; world.setBlockState(pos, state.with(SLOT1, !inHand.isEmpty()));}
+            case 56 -> {i = 2; world.setBlockState(pos, state.with(SLOT2, !inHand.isEmpty()));}
+            case 50 -> {i = 3; world.setBlockState(pos, state.with(FUEL , !inHand.isEmpty()));}
+            default -> {return ActionResult.PASS;}
         }
 
-
-        final ItemStack inHand = player.getMainHandStack();
         player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
         entity.setStack(i, inHand);
         return ActionResult.SUCCESS;

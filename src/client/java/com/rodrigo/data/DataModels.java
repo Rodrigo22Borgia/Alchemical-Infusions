@@ -26,31 +26,9 @@ public class DataModels extends FabricModelProvider {
 
     @Override
     public void generateBlockStateModels(BlockStateModelGenerator generator) {
-        //generator.registerSimpleState(_BlockRegistry.alchemy);
-
-        Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> POTION1 = (builder) -> builder;
-        Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> POTION2 = (builder) -> builder;
-        Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> BREW = (builder) -> builder;
-        Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> FUEL = (builder) -> builder;
-
-        TexturedModel.Factory TEMPLATE_LEAF_LITTER_1 =  TexturedModel.makeFactory(TextureMap::texture, block("cube_all", TextureKey.of("wtf", TextureKey.ALL)));
-
-//        TextureKey t = TextureKey.of("zrdz");
-//        generator.blockStateCollector.accept(MultipartBlockModelDefinitionCreator.create(_BlockRegistry.alchemy)
-//                        .with(createWeightedVariant(texturedModelFactory("block").upload(_BlockRegistry.alchemy, generator.modelCollector)))
-//                .with((POTION1).apply(BlockStateModelGenerator.createMultipartConditionBuilder().put(AlchemyBlock.SLOT1, true)),
-//                        createWeightedVariant(block("block", t).upload(Identifier.of(AlchemicalInfusions.modid, "donno"), new TextureMap().put(t,Identifier.of("aaa")), generator.modelCollector)))
-//                .with(POTION1.apply(BlockStateModelGenerator.createMultipartConditionBuilder().put(AlchemyBlock.SLOT2, true)),
-//                        createWeightedVariant(texturedModelFactory("block").upload(_BlockRegistry.alchemy,"_slot2", generator.modelCollector)))
-//                .with(POTION1.apply(BlockStateModelGenerator.createMultipartConditionBuilder().put(AlchemyBlock.BREW, true)),
-//                        createWeightedVariant(texturedModelFactory("block").upload(_BlockRegistry.alchemy,"_brew", generator.modelCollector)))
-//                .with(POTION1.apply(BlockStateModelGenerator.createMultipartConditionBuilder().put(AlchemyBlock.FUEL, true)),
-//                        createWeightedVariant(texturedModelFactory("block").upload(_BlockRegistry.alchemy,"_fuel", generator.modelCollector))));
-
-
         multipart(generator, _BlockRegistry.alchemy, Identifier.of(AlchemicalInfusions.modid, "block/alchemy"), new Pair[]{}, new Quartet[]{
-                new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_slot1"), AlchemyBlock.SLOT1, true, new Pair[]{}),
-                new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_slot2"), AlchemyBlock.SLOT2, true, new Pair[]{}),
+                new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_vial1"), AlchemyBlock.SLOT1, true, new Pair[]{}),
+                new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_vial2"), AlchemyBlock.SLOT2, true, new Pair[]{}),
                 new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_brew" ), AlchemyBlock.BREW , true, new Pair[]{}),
                 new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_fuel" ), AlchemyBlock.FUEL , true, new Pair[]{})
         });
