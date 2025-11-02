@@ -1,11 +1,9 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
-import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.AlchemyEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.DispenserBlockEntity;
 import net.minecraft.component.ComponentMap;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.PotionContentsComponent;
@@ -17,19 +15,15 @@ import net.minecraft.item.*;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.BlockMirror;
-import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
-import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -45,8 +39,8 @@ public class AlchemyBlock extends BlockWithEntity  {
     public static final BooleanProperty SLOT1= BooleanProperty.of("slot1");
     public static final BooleanProperty SLOT2= BooleanProperty.of("slot2");
     public static final BooleanProperty LIT  = Properties.LIT;
-
-    private static final VoxelShape shape;
+    private static final BooleanProperty[] PROPERTIES = new BooleanProperty[]{BREW, SLOT1, SLOT2, FUEL};
+    private static final VoxelShape SHAPE;
 
     public AlchemyBlock(Settings settings){
         super(settings);
@@ -80,12 +74,17 @@ public class AlchemyBlock extends BlockWithEntity  {
             case 281-> {i = 0; world.setBlockState(pos, state.with(BREW , !inHand.isEmpty()));}
             case 62 -> {i = 1; world.setBlockState(pos, state.with(SLOT1, !inHand.isEmpty()));}
             case 56 -> {i = 2; world.setBlockState(pos, state.with(SLOT2, !inHand.isEmpty()));}
-            case 50 -> {i = 3; world.setBlockState(pos, state.with(FUEL , !inHand.isEmpty()));}
+            case 50 -> {i = 3; world.setBlockState(pos, state.with(FUEL , !inHand.isEmpty()));
+                if (player.getMainHandStack().getItem() == Items.FLINT_AND_STEEL) {
+                    return brewPotion(entity, world, pos, state);
+                }}
             default -> {return ActionResult.PASS;}
         }
+        world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS);
 
         player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
         entity.setStack(i, inHand);
+        handleInteraction(entity, world, pos, state);
         return ActionResult.SUCCESS;
     }
     private ActionResult brewPotion(AlchemyEntity entity, World world, BlockPos pos, BlockState state) {
@@ -206,23 +205,13 @@ public class AlchemyBlock extends BlockWithEntity  {
 
         entity.setStack(0, brew);
         fuel.decrement(1);
+        world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS);
+        for (int i = 0; i < 4; i++) {
+            state = state.with(PROPERTIES[i], !entity.getStack(i).isEmpty());
+        }
+        world.setBlockState(pos, state);
         handleInteraction(entity, world, pos, state);
         return ActionResult.CONSUME;
-    }
-
-
-    private static void ingredientIteration(final StatusEffectInstance pEffect, final StatusEffectInstance[] elongator, final int i, final StatusEffectInstance[] ingredient) {
-        RegistryEntry<StatusEffect> pEffectType;
-        final int pDuration, iDuration;
-        for (final StatusEffectInstance iEffect : ingredient) {
-            pEffectType = pEffect.getEffectType();
-            if (pEffectType == iEffect.getEffectType() && pEffect.getAmplifier() == 1) {
-                pDuration = pEffect.getDuration();
-                iDuration = iEffect.getDuration();
-                elongator[i] = new StatusEffectInstance(pEffectType, pDuration + (iDuration * iDuration / pDuration));
-                break;
-            }
-        }
     }
 
     private static void createBrew(final ItemStack brew, final StatusEffectInstance... effects) {
@@ -258,7 +247,7 @@ public class AlchemyBlock extends BlockWithEntity  {
 
     @Override
     protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return shape;
+        return SHAPE;
     }
 
     private static final HashMap<Item, StatusEffectInstance[]> INGREDIENT_MAP = new HashMap<>();
@@ -267,7 +256,7 @@ public class AlchemyBlock extends BlockWithEntity  {
         INGREDIENT_MAP.put(Items.SWEET_BERRIES, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.SATURATION, 200), new StatusEffectInstance(StatusEffects.ABSORPTION, 200)});
         INGREDIENT_MAP.put(Items.GOLDEN_APPLE, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.ABSORPTION, 500)});
 
-        shape = VoxelShapes.union(
+        SHAPE = VoxelShapes.union(
                 VoxelShapes.cuboid(0.0625, 0, 0.3125, 0.4375, 0.05625, 0.6875),
                 VoxelShapes.cuboid(0.5625, 0, 0.5625, 0.9375, 0.05, 0.9375),
                 VoxelShapes.cuboid(0.5, 0, 0.0625, 0.875, 0.0625, 0.4375),
