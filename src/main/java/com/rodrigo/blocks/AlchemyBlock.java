@@ -1,6 +1,7 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
+import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.AlchemyEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -17,6 +18,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
+import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
@@ -38,13 +40,17 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class AlchemyBlock extends BlockWithEntity  {
+    public static final BooleanProperty FUEL = BooleanProperty.of("fuel");
+    public static final BooleanProperty BREW = BooleanProperty.of("brew");
+    public static final BooleanProperty SLOT1= BooleanProperty.of("slot1");
+    public static final BooleanProperty SLOT2= BooleanProperty.of("slot2");
+    public static final BooleanProperty LIT  = Properties.LIT;
 
-    private static final VoxelShape[] shapes;
-    private static final EnumProperty<Direction> FACING = Properties.HORIZONTAL_FACING;
+    private static final VoxelShape shape;
 
     public AlchemyBlock(Settings settings){
         super(settings);
-        this.setDefaultState(getDefaultState().with(FACING, Direction.NORTH));
+        this.setDefaultState(getDefaultState().with(FUEL, false).with(BREW, false).with(SLOT1, false).with(SLOT2,false).with(LIT,false));
     }
 
     /**
@@ -61,35 +67,30 @@ public class AlchemyBlock extends BlockWithEntity  {
      */
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!(world.getBlockEntity(pos) instanceof final AlchemyEntity entity)) {return ActionResult.PASS;}
+        if (!(world.getBlockEntity(pos) instanceof final AlchemyEntity entity)) {
+            return ActionResult.PASS;
+        }
         if (player.getMainHandStack().getItem() == Items.FLINT_AND_STEEL) {
             return brewPotion(entity, world, pos, state);
         }
-        final Vec3d offset = pos.toCenterPos().subtract(hit.getPos());
 
-        int i = 3;
-        if (offset.y > 0)  {i = i - 2;}
-        if (state.get(Properties.HORIZONTAL_FACING).getAxis() == Direction.Axis.Z ?offset.x > 0 : offset.z > 0) {i = i - 1;}
-
-        final ItemStack inHand = player.getMainHandStack();
-        final Item  inHandItem = inHand.getItem();
-//        if (((i == 2 || i == 1) && !(inHandItem instanceof PotionItem || inHand.get(DataComponentTypes.POTION_CONTENTS) != null))
-//        || ((i == 3) && !(inHandItem == Items.SHORT_GRASS))
-//        || ((i == 0) && !(inHandItem instanceof PotionItem || inHandItem == Items.GLASS_BOTTLE))) {return ActionResult.PASS;}
-
-        if (entity.getStack(i).isEmpty() && !inHand.isEmpty()) {
-            entity.setStack(i, inHand);
-            player.setStackInHand(Hand.MAIN_HAND, ItemStack.EMPTY);
-            handleInteraction(entity, world, pos, state);
-            return ActionResult.SUCCESS;
-        } else if (!entity.getStack(i).isEmpty() && inHand.isEmpty()) {
-            player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
-            entity.setStack(i, ItemStack.EMPTY);
-            handleInteraction(entity, world, pos, state);
-            return ActionResult.SUCCESS;
-        } else {
+        int i = switch ((int) (hit.getPos().y % 1 * 1000)) {
+            case 281 -> 0;
+            case 62 -> 1;
+            case 56 -> 2;
+            case 50 -> 3;
+            default -> 4;
+        };
+        AlchemicalInfusions.LOGGER.info(String.valueOf(hit.getPos().y % 1 * 1000));
+        if (i == 4) {
             return ActionResult.PASS;
         }
+
+
+        final ItemStack inHand = player.getMainHandStack();
+        player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
+        entity.setStack(i, inHand);
+        return ActionResult.SUCCESS;
     }
     private ActionResult brewPotion(AlchemyEntity entity, World world, BlockPos pos, BlockState state) {
         final ItemStack fuel = entity.getStack(3);
@@ -207,17 +208,6 @@ public class AlchemyBlock extends BlockWithEntity  {
             }
         } else {return ActionResult.PASS;}
 
-
-
-//        slot0.applyComponentsFrom(ComponentMap.builder()
-//                .add(DataComponentTypes.CONSUMABLE, ConsumableComponent.builder().consumeEffect(new ApplyEffectsConsumeEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, 3600))).build())
-//                .build());
-
-//        slot0.applyComponentsFrom(ComponentMap.builder()
-//                .add(DataComponentTypes.POTION_CONTENTS, PotionContentsComponent.DEFAULT
-//                        .with(new StatusEffectInstance(StatusEffects.NIGHT_VISION, 3600))
-//                ).build());
-
         entity.setStack(0, brew);
         fuel.decrement(1);
         handleInteraction(entity, world, pos, state);
@@ -260,11 +250,6 @@ public class AlchemyBlock extends BlockWithEntity  {
         }
     }
 
-    /**
-     * Vanilla constructors
-     * @return
-     */
-
     @Override
     protected MapCodec<? extends BlockWithEntity> getCodec() {
         return createCodec(AlchemyBlock::new);
@@ -272,45 +257,13 @@ public class AlchemyBlock extends BlockWithEntity  {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    protected BlockState rotate(BlockState state, BlockRotation rotation) {
-        return state.with(Properties.HORIZONTAL_FACING, rotation.rotate(state.get(Properties.HORIZONTAL_FACING)));
-    }
-
-    @Override
-    protected BlockState mirror(BlockState state, BlockMirror mirror) {
-        return state.with(Properties.HORIZONTAL_FACING, mirror.apply(state.get(Properties.HORIZONTAL_FACING)));
+        builder.add(BREW, FUEL, SLOT1, SLOT2, LIT);
     }
 
     @Override
     protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        switch (state.get(FACING)){
-            case NORTH -> {
-                return shapes[0];
-            }
-            case EAST -> {
-                return shapes[1];
-            }
-            case SOUTH -> {
-                return shapes[2];
-            }
-            case WEST -> {
-                return shapes[3];
-            }
-            default -> {
-                return VoxelShapes.fullCube();
-            }
-        }
+        return shape;
     }
-
-    @Override
-    public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing().getOpposite());
-    }
-
 
     private static final HashMap<Item, StatusEffectInstance[]> INGREDIENT_MAP = new HashMap<>();
     static {
@@ -318,15 +271,11 @@ public class AlchemyBlock extends BlockWithEntity  {
         INGREDIENT_MAP.put(Items.SWEET_BERRIES, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.SATURATION, 200), new StatusEffectInstance(StatusEffects.ABSORPTION, 200)});
         INGREDIENT_MAP.put(Items.GOLDEN_APPLE, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.ABSORPTION, 500)});
 
-        shapes = new VoxelShape[4];
-        shapes[0] = VoxelShapes.union(
+        shape = VoxelShapes.union(
                 VoxelShapes.cuboid(0.0625, 0, 0.3125, 0.4375, 0.05625, 0.6875),
-                VoxelShapes.cuboid(0.5625, 0, 0.5625, 0.9375, 0.049999999999999996, 0.9375),
+                VoxelShapes.cuboid(0.5625, 0, 0.5625, 0.9375, 0.05, 0.9375),
                 VoxelShapes.cuboid(0.5, 0, 0.0625, 0.875, 0.0625, 0.4375),
                 VoxelShapes.cuboid(0.5625, 0.21875, 0.5625, 0.9375, 0.28125, 0.9375)
         );
-        shapes[1] = VoxelTransform.rotate90(shapes[0]);
-        shapes[2] = VoxelTransform.rotate180(shapes[0]);
-        shapes[3] = VoxelTransform.rotate270(shapes[0]);
     }
 }
