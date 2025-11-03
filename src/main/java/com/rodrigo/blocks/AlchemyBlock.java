@@ -1,6 +1,7 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
+import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.AlchemyEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -13,6 +14,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -80,7 +82,7 @@ public class AlchemyBlock extends BlockWithEntity  {
                 }}
             default -> {return ActionResult.PASS;}
         }
-        world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS);
+        world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
 
         player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
         entity.setStack(i, inHand);
@@ -98,12 +100,19 @@ public class AlchemyBlock extends BlockWithEntity  {
         final ItemStack slot2 = entity.getStack(2);
         final Item item1 = slot1.getItem();
         final Item item2 = slot2.getItem();
-        final StatusEffectInstance[] ingredient1 = INGREDIENT_MAP.get(item1);
-        final StatusEffectInstance[] ingredient2 = INGREDIENT_MAP.get(item2);
+        final List<StatusEffectInstance> ingredient1;
+        final List<StatusEffectInstance> ingredient2;
+
+        final PotionContentsComponent component1 = slot1.getComponents().get(DataComponentTypes.POTION_CONTENTS);
+        final PotionContentsComponent component2 = slot2.getComponents().get(DataComponentTypes.POTION_CONTENTS);
+        ingredient1 = component1 == null ? null : component1.customEffects();
+        ingredient2 = component2 == null ? null : component2.customEffects();
+
+
 
         if (slot0.getItem() == Items.GLASS_BOTTLE) {
 //CREATION
-            if (ingredient1 != null && ingredient2 != null && ingredient1 != ingredient2) {
+            if (ingredient1 != null && ingredient2 != null && item1 != item2) {
                 outer:
                 //If two ingredient effects match, make potion
                 for (final StatusEffectInstance effect1 : ingredient1) {
@@ -118,8 +127,6 @@ public class AlchemyBlock extends BlockWithEntity  {
                 slot2.decrement(1);
 //COMBINATION
             } else if (item1 instanceof PotionItem && item2 instanceof PotionItem) {
-                final PotionContentsComponent component1 = slot1.get(DataComponentTypes.POTION_CONTENTS);
-                final PotionContentsComponent component2 = slot2.get(DataComponentTypes.POTION_CONTENTS);
                 if (component1 == null || component2 == null) {
                     return ActionResult.PASS;
                 }
@@ -145,7 +152,7 @@ public class AlchemyBlock extends BlockWithEntity  {
                 createBrew(brew, list.toArray(StatusEffectInstance[]::new));
                 entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));
                 entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));
-            }
+            } else {return ActionResult.PASS;}
         }
 
         else if (slot0.getItem() instanceof PotionItem) {
@@ -156,8 +163,8 @@ public class AlchemyBlock extends BlockWithEntity  {
             }
 
             final List<StatusEffectInstance> iEffects = Stream.concat(
-                    ingredient1 == null ? Stream.empty() : Arrays.stream(ingredient1),
-                    ingredient2 == null ? Stream.empty() : Arrays.stream(ingredient2)
+                    ingredient1 == null || item1 instanceof PotionItem ? Stream.empty() : ingredient1.stream(),
+                    ingredient2 == null || item2 instanceof PotionItem ? Stream.empty() : ingredient2.stream()
             ).toList();
 
 
@@ -205,7 +212,7 @@ public class AlchemyBlock extends BlockWithEntity  {
 
         entity.setStack(0, brew);
         fuel.decrement(1);
-        world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS);
+        world.playSound(null, pos, SoundEvents.BLOCK_BUBBLE_COLUMN_WHIRLPOOL_AMBIENT, SoundCategory.BLOCKS);
         for (int i = 0; i < 4; i++) {
             state = state.with(PROPERTIES[i], !entity.getStack(i).isEmpty());
         }
@@ -225,14 +232,6 @@ public class AlchemyBlock extends BlockWithEntity  {
     private void handleInteraction(AlchemyEntity entity, World world, BlockPos pos, BlockState state) {
         entity.markDirty();
         world.updateListeners(pos, state, state, 0);
-        displayInteraction(world, pos);
-    }
-
-    private void displayInteraction(World world, BlockPos pos){
-        if (world instanceof ServerWorld) {
-            ServerWorld serverWorld = (ServerWorld) world;
-            serverWorld.spawnParticles(ParticleTypes.POOF, pos.getX() + 0.5F, pos.getY() + 1.0, pos.getZ() + 0.5F, 7, 0.0F, 0.0F, 0.0F, 0.0F);
-        }
     }
 
     @Override
