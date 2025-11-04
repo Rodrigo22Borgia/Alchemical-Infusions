@@ -71,6 +71,7 @@ public class DataModels extends FabricModelProvider {
                             .upload(Identifier.of(AlchemicalInfusions.modid, id + "_" + j), textures, generator.modelCollector)));
         }
         generator.blockStateCollector.accept(creator);
+        generator.registerParentedItemModel(block, parent);
     }
 
     public static String id(Block block) {
