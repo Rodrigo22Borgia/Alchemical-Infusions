@@ -37,7 +37,6 @@ public class DataModels extends FabricModelProvider {
                 new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_fuel" ), AlchemyBlock.FUEL , true, new Pair[]{})
         });
 
-
     }
     private static <T extends Comparable<T>> void multipart(BlockStateModelGenerator generator, Block block, Identifier parent, Pair<TextureKey, Identifier>[] main, Quartet<Identifier, Property<T>, T, Pair<TextureKey, Identifier>[]>[] parts) {
         Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> BUILDER = (builder) -> builder;

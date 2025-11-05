@@ -4,9 +4,40 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.Hand;
 import net.minecraft.util.collection.DefaultedList;
 
+import java.util.function.Predicate;
+
 public interface ImplementedInventory extends Inventory {
+    default boolean itemAssign(int slot, PlayerEntity player, Predicate<ItemStack> predicate) {
+        ItemStack inHand = player.getMainHandStack();
+        ItemStack inSlot = this.getStack(slot);
+        if (!inHand.isEmpty() && inHand.getItem() == inSlot.getItem() && matchingNBT(inHand, inSlot)) {
+            int max = inHand.getMaxCount();
+            int count = inSlot.getCount() + inHand.getCount();
+            inHand.setCount(Math.max(count- max, 0));
+            inSlot.setCount(Math.min(count, max));
+        } else if (inHand.isEmpty() || predicate.test(inHand)) {
+            player.setStackInHand(Hand.MAIN_HAND, getStack(slot));
+            setStack(slot, inHand);
+        } else {
+            return false;
+        }
+        markDirty();
+        return true;
+    }
+
+    default boolean matchingNBT(ItemStack stack1, ItemStack stack2) {
+        NbtCompound nbt1 = new NbtCompound();
+        NbtCompound nbt2 = new NbtCompound();
+        nbt1.copyFromCodec(ItemStack.MAP_CODEC, stack1);
+        nbt1.remove("count");
+        nbt2.copyFromCodec(ItemStack.MAP_CODEC, stack2);
+        nbt2.remove("count");
+        return nbt1.equals(nbt2);
+    }
 
     /**
      * Retrieves the item list of this inventory.

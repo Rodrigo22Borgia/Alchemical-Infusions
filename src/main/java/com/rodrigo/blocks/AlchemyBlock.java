@@ -63,63 +63,32 @@ public class AlchemyBlock extends BlockWithEntity  {
             return ActionResult.PASS;
         }
         final ItemStack inHand = player.getMainHandStack();
-        final Item inHandItem = inHand.getItem();
 
-        if (inHandItem == Items.FLINT_AND_STEEL) {
-            inHand.damage(1, player);
-            world.playSound(null, pos, SoundEvents.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS);
-            return brewPotion(entity, world, pos, state);
-        }
-
-        //boolean test = inHand.isEmpty() || inHandItem == Items.GLASS_BOTTLE || !(inHand.get(DataComponentTypes.POTION_CONTENTS) != null).isEmpty();
-        int i;
         PotionContentsComponent test = inHand.get(DataComponentTypes.POTION_CONTENTS);
         switch ((int) (hit.getPos().y % 1 * 1000)) {
-            case 281-> {i = 0; world.setBlockState(pos, state.with(BREW , !inHand.isEmpty()));}
-            case 62 -> {i = 1;
-                if (inHand.isEmpty() || (test != null && !test.customEffects().isEmpty())) {
-                    world.setBlockState(pos, state.with(SLOT1, !inHand.isEmpty()));
-                } else {
-                    return ActionResult.PASS;
-                }
-            }
-            case 56 -> {i = 2;
-                if (inHand.isEmpty() || (test != null && !test.customEffects().isEmpty())) {
-                    world.setBlockState(pos, state.with(SLOT2, !inHand.isEmpty()));
-                } else {
-                    return ActionResult.PASS;
-                }
-            }
-            case 50 -> {i = 3;
+            case 281-> {
+                if (!entity.itemAssign(0, player, I -> {Item item = I.getItem();
+                    return item == Items.GLASS_BOTTLE || item == Items.ARROW || item == Items.POTION;})) {return ActionResult.PASS;}
+                world.setBlockState(pos, state.with(BREW , !entity.getStack(0).isEmpty()));}
+            case 62 -> {
+                if (!entity.itemAssign(1, player, I -> test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
+                world.setBlockState(pos, state.with(SLOT1, !entity.getStack(1).isEmpty()));}
+            case 56 -> {
+                if (!entity.itemAssign(2, player, I -> test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
+                world.setBlockState(pos, state.with(SLOT2, !entity.getStack(2).isEmpty()));}
+            case 50 -> {
                 if (player.getMainHandStack().getItem() == Items.FLINT_AND_STEEL) {
-                    return brewPotion(entity, world, pos, state);
-                }
-                if (inHand.getItem() == Items.STICK) {
-                    ItemStack e = entity.getStack(3);
-                    int fuel = e.getCount() + inHand.getCount();
-                    e.setCount(Math.max(fuel-64, 0));
-                    inHand.setCount(Math.min(fuel, 64));
-                } else if (!inHand.isEmpty()) {
-                    return ActionResult.PASS;
-                }
-                world.setBlockState(pos, state.with(FUEL , !inHand.isEmpty()));
-            }
+                    inHand.damage(1, player);
+                    world.playSound(null, pos, SoundEvents.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS);
+                    return brewPotion(entity, world, pos, state);}
+                if (!entity.itemAssign(3, player, I -> I.getItem() == Items.STICK)) {return ActionResult.PASS;}
+                world.setBlockState(pos, state.with(FUEL , !entity.getStack(3).isEmpty()));}
             default -> {return ActionResult.PASS;}
         }
-        world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
 
-        player.setStackInHand(Hand.MAIN_HAND, entity.getStack(i));
-        entity.setStack(i, inHand);
-        handleInteraction(entity, world, pos, state);
+        world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
+        world.updateListeners(pos, state, state, 0);
         return ActionResult.SUCCESS;
-    }
-    private static boolean itemAssign(boolean condition, ItemStack entity, ItemStack inHand) {
-        if (inHand.isEmpty()) {return true;}
-        if (!condition) {return false;}
-        int fuel = entity.getCount() + inHand.getCount();
-        inHand.setCount(Math.max(fuel-64, 0));
-        entity.setCount(Math.min(fuel, 64));
-        return true;
     }
 
 

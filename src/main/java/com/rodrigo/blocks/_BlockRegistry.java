@@ -24,7 +24,6 @@ public class _BlockRegistry {
         final RegistryKey<Block> registryKey = RegistryKey.of(RegistryKeys.BLOCK, Identifier.of(modid, path));
         final Block block = Blocks.register(registryKey, factory, settings);
         final Item item = Items.register(block);
-        //ItemGroupEvents.modifyEntriesEvent(groupKey).register(itemGroup -> itemGroup.add(Items.register(block)));
         ItemGroupEvents.modifyEntriesEvent(groupKey).register(itemGroup -> itemGroup.add(item));
         return block;
     }
