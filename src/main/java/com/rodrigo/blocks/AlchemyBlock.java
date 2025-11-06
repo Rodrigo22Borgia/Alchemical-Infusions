@@ -18,6 +18,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -69,12 +70,20 @@ public class AlchemyBlock extends BlockWithEntity  {
             case 281-> {
                 if (!entity.itemAssign(0, player, I -> {Item item = I.getItem();
                     return item == Items.GLASS_BOTTLE || item == Items.ARROW || item == Items.POTION;})) {return ActionResult.PASS;}
+                ItemStack inSlot = entity.getStack(0);
+                int slotCount = inSlot.getCount();
+                if (slotCount > 1) {
+                    ItemStack stack = player.getMainHandStack();
+                    player.setStackInHand(Hand.MAIN_HAND, inSlot.copyWithCount(slotCount-1));
+                    player.giveOrDropStack(stack);
+                    entity.getStack(0).setCount(1);
+                }
                 world.setBlockState(pos, state.with(BREW , !entity.getStack(0).isEmpty()));}
             case 62 -> {
-                if (!entity.itemAssign(1, player, I -> test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
+                if (!entity.itemAssign(1, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
                 world.setBlockState(pos, state.with(SLOT1, !entity.getStack(1).isEmpty()));}
             case 56 -> {
-                if (!entity.itemAssign(2, player, I -> test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
+                if (!entity.itemAssign(2, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null && !test.customEffects().isEmpty())) {return ActionResult.PASS;}
                 world.setBlockState(pos, state.with(SLOT2, !entity.getStack(2).isEmpty()));}
             case 50 -> {
                 if (player.getMainHandStack().getItem() == Items.FLINT_AND_STEEL) {
@@ -97,10 +106,11 @@ public class AlchemyBlock extends BlockWithEntity  {
         if (fuel.getItem() != Items.STICK) {
             return ActionResult.PASS;
         }
-        final ItemStack brew = Items.POTION.getDefaultStack();
+        final ItemStack brew;
         final ItemStack slot0 = entity.getStack(0);
         final ItemStack slot1 = entity.getStack(1);
         final ItemStack slot2 = entity.getStack(2);
+        final Item item0 = slot0.getItem();
         final Item item1 = slot1.getItem();
         final Item item2 = slot2.getItem();
         final List<StatusEffectInstance> ingredient1;
@@ -108,14 +118,45 @@ public class AlchemyBlock extends BlockWithEntity  {
 
         final PotionContentsComponent component1 = slot1.getComponents().get(DataComponentTypes.POTION_CONTENTS);
         final PotionContentsComponent component2 = slot2.getComponents().get(DataComponentTypes.POTION_CONTENTS);
-        ingredient1 = component1 == null ? null : component1.customEffects();
-        ingredient2 = component2 == null ? null : component2.customEffects();
+        ingredient1 = component1 == null ? List.of() : component1.customEffects();
+        ingredient2 = component2 == null ? List.of() : component2.customEffects();
 
+        if (item0 == Items.ARROW) {
+            brew = Items.TIPPED_ARROW.getDefaultStack();
+            brew.set(DataComponentTypes.CUSTOM_NAME, Text.of("Tipped Arrow"));
+        } else {
+            brew = Items.POTION.getDefaultStack();
+            brew.set(DataComponentTypes.CUSTOM_NAME, Text.of("Alchemical Brew"));
+        }
+//Tipping
+        if (item0 == Items.ARROW) {
+            if ((item1 != Items.POTION || ingredient1.isEmpty()) && (item2 != Items.POTION || ingredient2.isEmpty())) {
+                return ActionResult.PASS;
+            }
+            final ArrayList<StatusEffectInstance> list = new ArrayList<>();
 
+            for (final StatusEffectInstance effects1 : ingredient1) {
+                final RegistryEntry<StatusEffect> type = effects1.getEffectType();
+                final StatusEffectInstance[] temp = new StatusEffectInstance[1];
+                list.addFirst(effects1);
+                ingredient2.stream().filter(effects2 -> effects2.getEffectType() == type).forEach(effects2 -> {
+                    final int a = effects1.getAmplifier()+1;
+                    final int b = effects2.getAmplifier()+1;
+                    list.set(0,new StatusEffectInstance(type, (a*effects1.getDuration()+b*effects2.getDuration())/(a+b), Math.max(a,b)-1));
+                    temp[0] = effects2;
+                });
+                if(temp[0] != null) {
+                    ingredient2.remove(temp[0]);}
+            }
+            list.addAll(ingredient2);
 
-        if (slot0.getItem() == Items.GLASS_BOTTLE) {
+            createBrew(brew, list.stream().map(effect -> new StatusEffectInstance(effect.getEffectType(), effect.getDuration()*8, effect.getAmplifier())).toArray(StatusEffectInstance[]::new));
+            if (item1 instanceof PotionItem) {entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));}
+            if (item2 instanceof PotionItem) {entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));}
+
+        } else if (item0 == Items.GLASS_BOTTLE) {
 //CREATION
-            if (ingredient1 != null && ingredient2 != null && item1 != item2) {
+            if (!ingredient1.isEmpty() && !ingredient2.isEmpty() && item1 != item2) {
                 outer:
                 //If two ingredient effects match, make potion
                 for (final StatusEffectInstance effect1 : ingredient1) {
@@ -158,7 +199,7 @@ public class AlchemyBlock extends BlockWithEntity  {
             } else {return ActionResult.PASS;}
         }
 
-        else if (slot0.getItem() instanceof PotionItem) {
+        else if (item0 instanceof PotionItem) {
 //PROLONGATION
             final PotionContentsComponent component = slot0.get(DataComponentTypes.POTION_CONTENTS);
             if (component == null) {
@@ -166,8 +207,8 @@ public class AlchemyBlock extends BlockWithEntity  {
             }
 
             final List<StatusEffectInstance> iEffects = Stream.concat(
-                    ingredient1 == null || item1 instanceof PotionItem ? Stream.empty() : ingredient1.stream(),
-                    ingredient2 == null || item2 instanceof PotionItem ? Stream.empty() : ingredient2.stream()
+                    ingredient1.isEmpty() || item1 instanceof PotionItem ? Stream.empty() : ingredient1.stream(),
+                    ingredient2.isEmpty() || item2 instanceof PotionItem ? Stream.empty() : ingredient2.stream()
             ).toList();
 
 
@@ -220,7 +261,8 @@ public class AlchemyBlock extends BlockWithEntity  {
             state = state.with(PROPERTIES[i], !entity.getStack(i).isEmpty());
         }
         world.setBlockState(pos, state);
-        handleInteraction(entity, world, pos, state);
+        entity.markDirty();
+        world.updateListeners(pos, state, state, 0);
         return ActionResult.SUCCESS;
     }
 
@@ -230,11 +272,6 @@ public class AlchemyBlock extends BlockWithEntity  {
             components = components.with(effect);
         }
         brew.applyComponentsFrom(ComponentMap.builder().add(DataComponentTypes.POTION_CONTENTS, components).build());
-    }
-
-    private static void handleInteraction(AlchemyEntity entity, World world, BlockPos pos, BlockState state) {
-        entity.markDirty();
-        world.updateListeners(pos, state, state, 0);
     }
 
     @Override

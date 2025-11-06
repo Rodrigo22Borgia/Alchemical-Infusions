@@ -15,10 +15,15 @@ public interface ImplementedInventory extends Inventory {
         ItemStack inHand = player.getMainHandStack();
         ItemStack inSlot = this.getStack(slot);
         if (!inHand.isEmpty() && inHand.getItem() == inSlot.getItem() && matchingNBT(inHand, inSlot)) {
-            int max = inHand.getMaxCount();
-            int count = inSlot.getCount() + inHand.getCount();
-            inHand.setCount(Math.max(count- max, 0));
-            inSlot.setCount(Math.min(count, max));
+            if (predicate.test(inHand)) {
+                int count = inSlot.getCount() + inHand.getCount();
+                int max = inHand.getMaxCount();
+                inHand.setCount(Math.max(count- max, 0));
+                inSlot.setCount(Math.min(count, max));
+            } else {
+                player.giveOrDropStack(inSlot);
+                inSlot.setCount(0);
+            }
         } else if (inHand.isEmpty() || predicate.test(inHand)) {
             player.setStackInHand(Hand.MAIN_HAND, getStack(slot));
             setStack(slot, inHand);
@@ -29,12 +34,12 @@ public interface ImplementedInventory extends Inventory {
         return true;
     }
 
-    default boolean matchingNBT(ItemStack stack1, ItemStack stack2) {
+    static boolean matchingNBT(ItemStack stack1, ItemStack stack2) {
         NbtCompound nbt1 = new NbtCompound();
         NbtCompound nbt2 = new NbtCompound();
         nbt1.copyFromCodec(ItemStack.MAP_CODEC, stack1);
-        nbt1.remove("count");
         nbt2.copyFromCodec(ItemStack.MAP_CODEC, stack2);
+        nbt1.remove("count");
         nbt2.remove("count");
         return nbt1.equals(nbt2);
     }
