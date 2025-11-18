@@ -18,7 +18,8 @@ import static com.rodrigo.AlchemicalInfusions.modid;
 
 public class _BlockRegistry {
 
-    public static final Block alchemy = register("alchemy_set", AlchemyBlock::new, AbstractBlock.Settings.copy(Blocks.STONE), ItemGroups.FUNCTIONAL);
+    public static final Block alchemy_set = register("alchemy_set", AlchemyBlock::new, AbstractBlock.Settings.copy(Blocks.STONE), ItemGroups.FUNCTIONAL);
+    public static final Block infusion_anvil = register("infusion_anvil", InfusionAnvil::new, AbstractBlock.Settings.copy(Blocks.ANVIL), ItemGroups.FUNCTIONAL);
 
     protected static Block register(String path, Function<AbstractBlock.Settings, Block> factory, AbstractBlock.Settings settings, RegistryKey<ItemGroup> groupKey) {
         final RegistryKey<Block> registryKey = RegistryKey.of(RegistryKeys.BLOCK, Identifier.of(modid, path));
