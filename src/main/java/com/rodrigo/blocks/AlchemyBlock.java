@@ -77,6 +77,7 @@ public class AlchemyBlock extends BlockWithEntity  {
                     player.setStackInHand(Hand.MAIN_HAND, inSlot.copyWithCount(slotCount-1));
                     player.giveOrDropStack(stack);
                     entity.getStack(0).setCount(1);
+                    entity.markDirty();
                 }
                 world.setBlockState(pos, state.with(BREW , !entity.getStack(0).isEmpty()));}
             case 62 -> {
@@ -129,73 +130,18 @@ public class AlchemyBlock extends BlockWithEntity  {
             brew.set(DataComponentTypes.CUSTOM_NAME, Text.of("Alchemical Brew"));
         }
 //Tipping
-        if (item0 == Items.ARROW) {
-            if ((item1 != Items.POTION || ingredient1.isEmpty()) && (item2 != Items.POTION || ingredient2.isEmpty())) {
-                return ActionResult.PASS;
-            }
-            final ArrayList<StatusEffectInstance> list = new ArrayList<>();
-
-            for (final StatusEffectInstance effects1 : ingredient1) {
-                final RegistryEntry<StatusEffect> type = effects1.getEffectType();
-                final StatusEffectInstance[] temp = new StatusEffectInstance[1];
-                list.addFirst(effects1);
-                ingredient2.stream().filter(effects2 -> effects2.getEffectType() == type).forEach(effects2 -> {
-                    final int a = effects1.getAmplifier()+1;
-                    final int b = effects2.getAmplifier()+1;
-                    list.set(0,new StatusEffectInstance(type, (a*effects1.getDuration()+b*effects2.getDuration())/(a+b), Math.max(a,b)-1));
-                    temp[0] = effects2;
-                });
-                if(temp[0] != null) {
-                    ingredient2.remove(temp[0]);}
-            }
-            list.addAll(ingredient2);
-
-            createBrew(brew, list.stream().map(effect -> new StatusEffectInstance(effect.getEffectType(), effect.getDuration()*8, effect.getAmplifier())).toArray(StatusEffectInstance[]::new));
-            if (item1 instanceof PotionItem) {entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));}
-            if (item2 instanceof PotionItem) {entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));}
-
-        } else if (item0 == Items.GLASS_BOTTLE) {
+        if (item0 == Items.ARROW) {if (!tip_arrow(item1, item2, brew, entity, ingredient1, ingredient2)) {return ActionResult.PASS;}}
+        else if (item0 == Items.GLASS_BOTTLE) {
 //CREATION
             if (!ingredient1.isEmpty() && !ingredient2.isEmpty() && item1 != item2) {
-                outer:
-                //If two ingredient effects match, make potion
-                for (final StatusEffectInstance effect1 : ingredient1) {
-                    for (final StatusEffectInstance effect2 : ingredient2) {
-                        if (effect1.getEffectType() == effect2.getEffectType()) {
-                            createBrew(brew, new StatusEffectInstance(effect1.getEffectType(), (effect1.getDuration() + effect2.getDuration())/2));
-                            break outer;
-                        }
-                    }
-                }
-                slot1.decrement(1);
-                slot2.decrement(1);
+                createPotion(brew, slot1, slot2, ingredient1, ingredient2);
+
 //COMBINATION
             } else if (item1 instanceof PotionItem && item2 instanceof PotionItem) {
                 if (component1 == null || component2 == null) {
                     return ActionResult.PASS;
                 }
-
-                //
-                final ArrayList<StatusEffectInstance> list = new ArrayList<>();
-
-                for (final StatusEffectInstance effects1 : ingredient1) {
-                    final RegistryEntry<StatusEffect> type = effects1.getEffectType();
-                    final StatusEffectInstance[] temp = new StatusEffectInstance[1];
-                    list.addFirst(effects1);
-                    ingredient2.stream().filter(effects2 -> effects2.getEffectType() == type).forEach(effects2 -> {
-                        final int a = effects1.getAmplifier()+1;
-                        final int b = effects2.getAmplifier()+1;
-                        list.set(0,new StatusEffectInstance(type, (a*effects1.getDuration()+b*effects2.getDuration())/(a+b), Math.max(a,b)-1));
-                        temp[0] = effects2;
-                    });
-                    if(temp[0] != null) {
-                        ingredient2.remove(temp[0]);}
-                }
-                list.addAll(ingredient2);
-
-                createBrew(brew, list.toArray(StatusEffectInstance[]::new));
-                entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));
-                entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));
+                mixPotions(brew, entity, ingredient1, ingredient2);
             } else {return ActionResult.PASS;}
         }
 
@@ -206,51 +152,9 @@ public class AlchemyBlock extends BlockWithEntity  {
                 return ActionResult.PASS;
             }
 
-            final List<StatusEffectInstance> iEffects = Stream.concat(
-                    ingredient1.isEmpty() || item1 instanceof PotionItem ? Stream.empty() : ingredient1.stream(),
-                    ingredient2.isEmpty() || item2 instanceof PotionItem ? Stream.empty() : ingredient2.stream()
-            ).toList();
-
-
-            boolean flag = false;
-            Optional<Integer> prolongator;
-            RegistryEntry<StatusEffect> type;
-            int i = 0;
-            final StatusEffectInstance[] array = new StatusEffectInstance[component.customEffects().size()];
-
-            //Iterate through potion effects
-            for (final StatusEffectInstance pEffect : component.customEffects()) {
-                type = pEffect.getEffectType();
-
-                //Find longest matching ingredient effect
-                prolongator = iEffects.stream().filter(E -> E.getEffectType() == pEffect.getEffectType() && pEffect.getAmplifier() == 0).map(StatusEffectInstance::getDuration).max(Comparator.naturalOrder());
-
-                //Apply longest effect time to potion
-                if (prolongator.isPresent()) {
-                    final int a = pEffect.getDuration();
-                    final int b = prolongator.get();
-                    array[i] = new StatusEffectInstance(type, a + (b * b)/ a);
-                    flag = true;
-                } else {
-                    array[i] = pEffect;
-                }
-                i++;
-            }
-            if (flag) {
-                createBrew(brew, array);
-                if (!(slot1.getItem() instanceof PotionItem)) {slot1.decrement(1);}
-                if (!(slot2.getItem() instanceof PotionItem)) {slot2.decrement(1);}
-
 //DISTILLATION
-            } else {
-                final StatusEffectInstance[] components = new StatusEffectInstance[component.customEffects().size()];
-                i = 0;
-
-                //Increase amplifier, half time for each effect
-                for (final StatusEffectInstance customEffect : component.customEffects()) {
-                    components[i++] = new StatusEffectInstance(customEffect.getEffectType(), customEffect.getDuration()/2, Math.min(5, customEffect.getAmplifier()+1));
-                }
-                createBrew(brew, components);
+            if (!prolongation(brew, item1, item2, component, ingredient1, ingredient2, slot1, slot2)) {
+                distill(brew, component);
             }
         } else {return ActionResult.PASS;}
 
@@ -266,12 +170,131 @@ public class AlchemyBlock extends BlockWithEntity  {
         return ActionResult.SUCCESS;
     }
 
-    private static void createBrew(final ItemStack brew, final StatusEffectInstance... effects) {
+    private static void distill(ItemStack brew, PotionContentsComponent component) {
+        final StatusEffectInstance[] components = new StatusEffectInstance[component.customEffects().size()];
+        int i = 0;
+
+        //Increase amplifier, half time for each effect
+        for (final StatusEffectInstance customEffect : component.customEffects()) {
+            components[i++] = new StatusEffectInstance(customEffect.getEffectType(), customEffect.getDuration()/2, Math.min(5, customEffect.getAmplifier()+1));
+        }
+        applyBrewEffects(brew, components);
+    }
+
+    private static boolean prolongation(ItemStack brew, Item item1, Item item2, PotionContentsComponent component, List<StatusEffectInstance> ingredient1, List<StatusEffectInstance> ingredient2, ItemStack slot1, ItemStack slot2) {
+
+
+        final List<StatusEffectInstance> iEffects = Stream.concat(
+                ingredient1.isEmpty() || item1 instanceof PotionItem ? Stream.empty() : ingredient1.stream(),
+                ingredient2.isEmpty() || item2 instanceof PotionItem ? Stream.empty() : ingredient2.stream()
+        ).toList();
+
+
+        boolean flag = false;
+        Optional<Integer> prolongator;
+        RegistryEntry<StatusEffect> type;
+        int i = 0;
+        final StatusEffectInstance[] array = new StatusEffectInstance[component.customEffects().size()];
+
+        //Iterate through potion effects
+        for (final StatusEffectInstance pEffect : component.customEffects()) {
+            type = pEffect.getEffectType();
+
+            //Find longest matching ingredient effect
+            prolongator = iEffects.stream().filter(E -> E.getEffectType() == pEffect.getEffectType() && pEffect.getAmplifier() == 0).map(StatusEffectInstance::getDuration).max(Comparator.naturalOrder());
+
+            //Apply longest effect time to potion
+            if (prolongator.isPresent()) {
+                final int a = pEffect.getDuration();
+                final int b = prolongator.get();
+                array[i] = new StatusEffectInstance(type, a + (b * b)/ a);
+                flag = true;
+            } else {
+                array[i] = pEffect;
+            }
+            i++;
+        }
+
+        if (flag) {
+            applyBrewEffects(brew, array);
+            if (!(slot1.getItem() instanceof PotionItem)) {slot1.decrement(1);}
+            if (!(slot2.getItem() instanceof PotionItem)) {slot2.decrement(1);}
+
+        }
+        return flag;
+    }
+
+    private static void mixPotions(ItemStack brew, AlchemyEntity entity, List<StatusEffectInstance> ingredient1, List<StatusEffectInstance> ingredient2) {
+        final ArrayList<StatusEffectInstance> list = new ArrayList<>();
+
+        for (final StatusEffectInstance effects1 : ingredient1) {
+            final RegistryEntry<StatusEffect> type = effects1.getEffectType();
+            final StatusEffectInstance[] temp = new StatusEffectInstance[1];
+            list.addFirst(effects1);
+            ingredient2.stream().filter(effects2 -> effects2.getEffectType() == type).forEach(effects2 -> {
+                final int a = effects1.getAmplifier()+1;
+                final int b = effects2.getAmplifier()+1;
+                list.set(0,new StatusEffectInstance(type, (a*effects1.getDuration()+b*effects2.getDuration())/(a+b), Math.max(a,b)-1));
+                temp[0] = effects2;
+            });
+            if(temp[0] != null) {
+                ingredient2.remove(temp[0]);}
+        }
+        list.addAll(ingredient2);
+
+        applyBrewEffects(brew, list.toArray(StatusEffectInstance[]::new));
+        entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));
+        entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));
+    }
+
+    private static void applyBrewEffects(final ItemStack brew, final StatusEffectInstance... effects) {
         PotionContentsComponent components = PotionContentsComponent.DEFAULT;
         for (final StatusEffectInstance effect : effects) {
             components = components.with(effect);
         }
         brew.applyComponentsFrom(ComponentMap.builder().add(DataComponentTypes.POTION_CONTENTS, components).build());
+    }
+
+    private static void createPotion(ItemStack brew, ItemStack slot1, ItemStack slot2, List<StatusEffectInstance> ingredient1, List<StatusEffectInstance> ingredient2) {
+        outer:
+        //If two ingredient effects match, make potion
+        for (final StatusEffectInstance effect1 : ingredient1) {
+            for (final StatusEffectInstance effect2 : ingredient2) {
+                if (effect1.getEffectType() == effect2.getEffectType()) {
+                    applyBrewEffects(brew, new StatusEffectInstance(effect1.getEffectType(), (effect1.getDuration() + effect2.getDuration())/2));
+                    break outer;
+                }
+            }
+        }
+        slot1.decrement(1);
+        slot2.decrement(1);
+    }
+
+    private static boolean tip_arrow(Item item1, Item item2, ItemStack brew, AlchemyEntity entity, List<StatusEffectInstance> ingredient1, List<StatusEffectInstance> ingredient2) {
+        if ((item1 != Items.POTION || ingredient1.isEmpty()) && (item2 != Items.POTION || ingredient2.isEmpty())) {
+            return false;
+        }
+        final ArrayList<StatusEffectInstance> list = new ArrayList<>();
+
+        for (final StatusEffectInstance effects1 : ingredient1) {
+            final RegistryEntry<StatusEffect> type = effects1.getEffectType();
+            final StatusEffectInstance[] temp = new StatusEffectInstance[1];
+            list.addFirst(effects1);
+            ingredient2.stream().filter(effects2 -> effects2.getEffectType() == type).forEach(effects2 -> {
+                final int a = effects1.getAmplifier()+1;
+                final int b = effects2.getAmplifier()+1;
+                list.set(0,new StatusEffectInstance(type, (a*effects1.getDuration()+b*effects2.getDuration())/(a+b), Math.max(a,b)-1));
+                temp[0] = effects2;
+            });
+            if(temp[0] != null) {
+                ingredient2.remove(temp[0]);}
+        }
+        list.addAll(ingredient2);
+
+        applyBrewEffects(brew, list.stream().map(effect -> new StatusEffectInstance(effect.getEffectType(), effect.getDuration()*8, effect.getAmplifier())).toArray(StatusEffectInstance[]::new));
+        if (item1 instanceof PotionItem) {entity.setStack(1, new ItemStack(Items.GLASS_BOTTLE));}
+        if (item2 instanceof PotionItem) {entity.setStack(2, new ItemStack(Items.GLASS_BOTTLE));}
+        return true;
     }
 
     @Override

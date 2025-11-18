@@ -3,6 +3,7 @@ package com.rodrigo;
 import com.rodrigo.blocks._BlockRegistry;
 import com.rodrigo.entities._EntityRegistry;
 import com.rodrigo.items.Ingredients;
+import com.rodrigo.items._ItemRegistry;
 import com.rodrigo.mixin.ComponentMixin;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.component.ComponentMap;
@@ -34,6 +35,7 @@ public class AlchemicalInfusions implements ModInitializer {
 	public void onInitialize() {
         _EntityRegistry.init();
         _BlockRegistry.init();
+        _ItemRegistry.init();
         Ingredients.init();
 		LOGGER.info("Initialized");
 

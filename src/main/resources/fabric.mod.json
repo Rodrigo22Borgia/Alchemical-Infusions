@@ -22,7 +22,7 @@
 			"com.rodrigo.AlchemicalInfusionsClient"
 		],
 		"fabric-datagen": [
-          "com.rodrigo.data.AlchemicalInfusionsDataGenerator"
+          "com.rodrigo.data._Datagen"
 		]
 	},
 	"mixins": [

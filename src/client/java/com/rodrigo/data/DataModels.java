@@ -3,6 +3,7 @@ package com.rodrigo.data;
 import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.blocks.AlchemyBlock;
 import com.rodrigo.blocks._BlockRegistry;
+import com.rodrigo.items._ItemRegistry;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
@@ -36,7 +37,8 @@ public class DataModels extends FabricModelProvider {
                 new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_brew" ), AlchemyBlock.BREW , true, new Pair[]{}),
                 new Quartet<>(Identifier.of(AlchemicalInfusions.modid, "block/alchemy_fuel" ), AlchemyBlock.FUEL , true, new Pair[]{})
         });
-
+        generator.registerItemModel(_ItemRegistry.splash_bottle);
+        generator.registerItemModel(_ItemRegistry.lingering_bottle);
     }
     private static <T extends Comparable<T>> void multipart(BlockStateModelGenerator generator, Block block, Identifier parent, Pair<TextureKey, Identifier>[] main, Quartet<Identifier, Property<T>, T, Pair<TextureKey, Identifier>[]>[] parts) {
         Function<MultipartModelConditionBuilder, MultipartModelConditionBuilder> BUILDER = (builder) -> builder;
@@ -75,15 +77,6 @@ public class DataModels extends FabricModelProvider {
 
     public static String id(Block block) {
         return Registries.BLOCK.getId(block).getPath().replaceFirst(".*\\.", "");
-    }
-
-    private static TexturedModel.Factory texturedModelFactory(String parent) {
-        return TexturedModel.makeFactory(TextureMap::texture, block(parent));
-        //Models;
-    }
-
-    private static Model block(String parent, TextureKey... requiredTextureKeys) {
-        return new Model(Optional.of(Identifier.of(AlchemicalInfusions.modid,"block/" + parent)), Optional.empty(), requiredTextureKeys);
     }
 
     @Override

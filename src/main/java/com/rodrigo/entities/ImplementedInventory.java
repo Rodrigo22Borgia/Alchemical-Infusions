@@ -160,5 +160,4 @@ public interface ImplementedInventory extends Inventory {
     default boolean canPlayerUse(PlayerEntity player) {
         return true;
     }
-
 }
