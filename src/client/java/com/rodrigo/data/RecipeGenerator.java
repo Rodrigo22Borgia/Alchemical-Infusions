@@ -30,6 +30,11 @@ public class RecipeGenerator extends FabricRecipeProvider {
                           .pattern("UIU")
                           .pattern("###")
                           .input('U', Items.GLASS_BOTTLE).input('I', Items.IRON_INGOT).input('#', Items.SMOOTH_STONE_SLAB).offerTo(recipeExporter);
+                  createShaped(RecipeCategory.BREWING, _BlockRegistry.infusion_anvil).criterion(hasItem(Items.IRON_INGOT), this.conditionsFromItem(Items.IRON_INGOT))
+                          .pattern("///")
+                          .pattern(" # ")
+                          .pattern("###")
+                          .input('/', Items.AMETHYST_SHARD).input('#', Items.IRON_INGOT).offerTo(recipeExporter);
               }
           };
     }
