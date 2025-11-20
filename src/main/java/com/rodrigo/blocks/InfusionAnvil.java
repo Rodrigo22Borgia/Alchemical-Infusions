@@ -59,7 +59,7 @@ public class InfusionAnvil extends BlockWithEntity {
             player.setStackInHand(Hand.MAIN_HAND, Items.GLASS_BOTTLE.getDefaultStack());
 
             final ArrayList<RegistryKey<Enchantment>> list = new ArrayList<>();
-            hand.getComponents().get(DataComponentTypes.POTION_CONTENTS).customEffects().forEach(e -> java.util.Collections.addAll(list, InfusionMap.MAP.getOrDefault(e.getEffectType(), EMPTY)));
+            hand.getComponents().get(DataComponentTypes.POTION_CONTENTS).getEffects().forEach(e -> java.util.Collections.addAll(list, InfusionMap.MAP.getOrDefault(e.getEffectType(), EMPTY)));
             Registry<Enchantment> registry = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
 
             for (RegistryKey<Enchantment> enchant : list) {
