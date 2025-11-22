@@ -10,6 +10,7 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
@@ -18,6 +19,7 @@ import net.minecraft.item.PotionItem;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
@@ -35,6 +37,8 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class InfusionAnvil extends BlockWithEntity {
     private static final VoxelShape[] SHAPE = new VoxelShape[4];
@@ -54,7 +58,10 @@ public class InfusionAnvil extends BlockWithEntity {
             return ActionResult.SUCCESS;
         }
         final ItemStack stack = entity.getStack(0);
+        if (stack.isEmpty()) {return ActionResult.PASS;}
         final ItemStack hand  = player.getMainHandStack();
+        final RegistryKey<Enchantment>[] catalyst  = InfusionMap.CATALYSTS.get(hand.getItem());
+
         if (player.getMainHandStack().getItem() instanceof PotionItem) {
             player.setStackInHand(Hand.MAIN_HAND, Items.GLASS_BOTTLE.getDefaultStack());
 
@@ -64,10 +71,27 @@ public class InfusionAnvil extends BlockWithEntity {
 
             for (RegistryKey<Enchantment> enchant : list) {
                 Enchantment e = registry.get(enchant);
-                e.isAcceptableItem(stack);
-                stack.addEnchantment(registry.getEntry(e), 1);
+                if (e.isAcceptableItem(stack)) {
+                    stack.addEnchantment(registry.getEntry(e), 1);
+                }
             }
-            //EnchantmentHelper.apply(this, (builder) -> builder.add(enchantment, level));
+        } else if (catalyst != null) {
+            AtomicBoolean applied = new AtomicBoolean(false);
+            stack.getEnchantments().getEnchantmentEntries().stream().filter(
+                    E -> Arrays.stream(catalyst).anyMatch(
+                    C -> E.getKey().matchesKey(C))).forEach(E -> {
+                final RegistryEntry<Enchantment> entry = E.getKey();
+                final int max = entry.value().getMaxLevel();
+                final int lvl = EnchantmentHelper.getLevel(entry, stack);
+                if (lvl < max) {
+                    stack.addEnchantment(entry, lvl+1);
+                    applied.set(true);
+                }
+            });
+            if (applied.get()) {
+                hand.decrement(1);
+                world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_USE, SoundCategory.BLOCKS, 0.3f, 0.7f);
+            }
         }
         return ActionResult.PASS;
     }
