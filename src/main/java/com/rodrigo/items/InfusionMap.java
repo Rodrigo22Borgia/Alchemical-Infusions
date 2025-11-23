@@ -24,7 +24,7 @@ public abstract class InfusionMap {
         CATALYSTS.put(Items.ENDER_PEARL     , new RegistryKey[]{PROJECTILE_PROTECTION, BANE_OF_ARTHROPODS, LOYALTY           , WIND_BURST     , PUNCH         , KNOCKBACK});
         CATALYSTS.put(Items.QUARTZ          , new RegistryKey[]{SHARPNESS            , POWER             , BREACH            , SOUL_SPEED     , SWIFT_SNEAK});
         CATALYSTS.put(Items.PRISMARINE_SHARD, new RegistryKey[]{THORNS               , IMPALING          , RESPIRATION});
-        CATALYSTS.put(Items.REDSTONE        , new RegistryKey[]{UNBREAKING});
+        CATALYSTS.put(Items.OBSIDIAN        , new RegistryKey[]{UNBREAKING});
 
         MAP.put(SPEED              , new RegistryKey[]{ SWIFT_SNEAK             , RIPTIDE         , QUICK_CHARGE});
         MAP.put(SLOWNESS           , new RegistryKey[]{ SILK_TOUCH});

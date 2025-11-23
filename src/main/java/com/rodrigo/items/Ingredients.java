@@ -1,19 +1,38 @@
 package com.rodrigo.items;
 
 import com.rodrigo.mixin.ComponentMixin;
+import net.minecraft.block.AnvilBlock;
 import net.minecraft.component.ComponentMap;
 import net.minecraft.component.ComponentType;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.PotionContentsComponent;
+import net.minecraft.component.type.TooltipDisplayComponent;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemGroups;
 import net.minecraft.item.Items;
+import net.minecraft.item.PotionItem;
+import net.minecraft.predicate.item.EnchantmentsPredicate;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.SimpleRegistry;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
+import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 import oshi.util.tuples.Pair;
+
+import java.text.NumberFormat;
+import java.util.LinkedHashSet;
 
 import static net.minecraft.entity.effect.StatusEffects.*;
 
@@ -126,6 +145,7 @@ addEffects(Items.GUNPOWDER             , new StatusEffectInstance(FIRE_RESISTANC
 addEffects(Items.PRISMARINE_CRYSTALS   , new StatusEffectInstance(NIGHT_VISION       , 1100), new StatusEffectInstance(DOLPHINS_GRACE     , 1400));
 addEffects(Items.GHAST_TEAR            , new StatusEffectInstance(REGENERATION       , 2300), new StatusEffectInstance(WATER_BREATHING    , 2300));
 addEffects(Items.BONE_MEAL             , new StatusEffectInstance(HEALTH_BOOST       , 1400), new StatusEffectInstance(POISON             , 1700));
+addEffects(Items.HONEY_BOTTLE          , new StatusEffectInstance(INSTANT_HEALTH     , 0),    new StatusEffectInstance(SATURATION         , 0));
 
 addEffects(Items.REDSTONE              , new StatusEffectInstance(SLOWNESS           , 1500), new StatusEffectInstance(WEAKNESS           , 1200));
 addEffects(Items.GLOWSTONE_DUST        , new StatusEffectInstance(GLOWING            , 1700), new StatusEffectInstance(SPEED              , 1500));
@@ -151,15 +171,26 @@ addEffects(Items.NETHER_WART           , new StatusEffectInstance(INSTANT_HEALTH
         for (final StatusEffectInstance effect : effects) {
             components = components.with(effect);
         }
-        addComponents(ingredient, new Pair<>(DataComponentTypes.POTION_CONTENTS, components));
+        addComponents(ingredient, DataComponentTypes.POTION_CONTENTS, components);
     }
 
     @SafeVarargs
-    public static <T> void addComponents(Item item, Pair<ComponentType<T>, @Nullable T>... components) {
-        ComponentMap.Builder builder = ComponentMap.builder().addAll(item.getComponents());
-        for (Pair<ComponentType<T>, @Nullable T> component : components) {
-            builder.add(component.getA(), component.getB());
+    public static void addEnchants(Registry<Enchantment> registry, Item item, RegistryKey<Enchantment>... enchants) {
+        LoreComponent lore = LoreComponent.DEFAULT;
+
+        for (RegistryKey<Enchantment> enchant : enchants) {
+            RegistryEntry<Enchantment> e = registry.getEntry(registry.get(enchant));
+            lore = lore.with(Enchantment.getName(e, e.value().getMaxLevel()).copy().setStyle(Style.EMPTY.withColor(Formatting.GRAY).withItalic(false)));
         }
+
+        Ingredients.addComponents(item, DataComponentTypes.LORE, lore);
+        //Ingredients.addComponents(item, DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, false);
+        //Ingredients.addComponents(item, DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplayComponent.DEFAULT.with(DataComponentTypes.STORED_ENCHANTMENTS, false));
+    }
+
+    public static <T> void addComponents(Item item, ComponentType<T> component, @Nullable T value) {
+        ComponentMap.Builder builder = ComponentMap.builder().addAll(item.getComponents());
+        builder.add(component, value);
         ((ComponentMixin)item).setComponents(builder.build());
     }
 }

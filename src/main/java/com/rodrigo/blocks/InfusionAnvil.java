@@ -1,8 +1,10 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
+import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.InfusionEntity;
 import com.rodrigo.items.InfusionMap;
+import net.fabricmc.fabric.impl.item.EnchantmentUtil;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -16,10 +18,12 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.PotionItem;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.server.command.EnchantCommand;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
@@ -52,7 +56,7 @@ public class InfusionAnvil extends BlockWithEntity {
 
     @Override
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!(world.getBlockEntity(pos) instanceof InfusionEntity entity)) {return ActionResult.PASS;}
+        if (!(world.getBlockEntity(pos) instanceof InfusionEntity entity) || ((int) (hit.getPos().y % 1 * 1000)) != 687) {return ActionResult.PASS;}
         if (entity.itemAssign(0, player, I -> I.isEnchantable() || I.hasEnchantments())) {
             world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
             return ActionResult.SUCCESS;
