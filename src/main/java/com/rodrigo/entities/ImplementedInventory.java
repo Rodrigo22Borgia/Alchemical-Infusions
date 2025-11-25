@@ -11,6 +11,11 @@ import net.minecraft.util.collection.DefaultedList;
 import java.util.function.Predicate;
 
 public interface ImplementedInventory extends Inventory {
+    /**
+     * Assigns the player's main hand item into the [int] slot of this entity.
+     * Predicate allows to filter what items are allowed into the slot
+     * Returns true on swap or empty both slots, false if no swap occurred.
+     */
     default boolean itemAssign(int slot, PlayerEntity player, Predicate<ItemStack> predicate) {
         ItemStack inHand = player.getMainHandStack();
         ItemStack inSlot = this.getStack(slot);

@@ -79,6 +79,7 @@ public class InfusionAnvil extends BlockWithEntity {
                     stack.addEnchantment(registry.getEntry(e), 1);
                 }
             }
+            world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.3f, 0.5f);
         } else if (catalyst != null) {
             AtomicBoolean applied = new AtomicBoolean(false);
             stack.getEnchantments().getEnchantmentEntries().stream().filter(
@@ -94,7 +95,7 @@ public class InfusionAnvil extends BlockWithEntity {
             });
             if (applied.get()) {
                 hand.decrement(1);
-                world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_USE, SoundCategory.BLOCKS, 0.3f, 0.7f);
+                world.playSound(null, pos, SoundEvents.BLOCK_SMITHING_TABLE_USE, SoundCategory.BLOCKS, 0.3f, 1f);
             }
         }
         return ActionResult.PASS;

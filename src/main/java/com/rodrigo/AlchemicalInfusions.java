@@ -12,9 +12,15 @@ import net.minecraft.item.Item;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.resource.JsonDataLoader;
+import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFinder;
+import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.Map;
 
 public class AlchemicalInfusions implements ModInitializer {
@@ -34,9 +40,9 @@ public class AlchemicalInfusions implements ModInitializer {
         InfusionMap.init();
 
         ServerLifecycleEvents.SERVER_STARTED.register((server -> {
+            Ingredients.assignIngredients(server);
             Registry<Enchantment> registry = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
             for (Map.Entry<Item, RegistryKey<Enchantment>[]> entry : InfusionMap.CATALYSTS.entrySet()) {
-                AlchemicalInfusions.LOGGER.info(entry.getKey().toString());
                 Ingredients.addEnchants(registry, entry.getKey(), entry.getValue());
             }
         }));

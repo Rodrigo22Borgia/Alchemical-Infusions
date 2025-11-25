@@ -1,38 +1,30 @@
 package com.rodrigo.items;
 
+import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.mixin.ComponentMixin;
-import net.minecraft.block.AnvilBlock;
 import net.minecraft.component.ComponentMap;
 import net.minecraft.component.ComponentType;
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.component.type.TooltipDisplayComponent;
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroups;
 import net.minecraft.item.Items;
-import net.minecraft.item.PotionItem;
-import net.minecraft.predicate.item.EnchantmentsPredicate;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.SimpleRegistry;
 import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.text.MutableText;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
-import oshi.util.tuples.Pair;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
-import java.text.NumberFormat;
-import java.util.LinkedHashSet;
+import java.io.IOException;
+import java.util.*;
 
 import static net.minecraft.entity.effect.StatusEffects.*;
 
@@ -186,6 +178,38 @@ addEffects(Items.NETHER_WART           , new StatusEffectInstance(INSTANT_HEALTH
         Ingredients.addComponents(item, DataComponentTypes.LORE, lore);
         //Ingredients.addComponents(item, DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, false);
         //Ingredients.addComponents(item, DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplayComponent.DEFAULT.with(DataComponentTypes.STORED_ENCHANTMENTS, false));
+    }
+
+    public static void assignIngredients(MinecraftServer server) {
+        Registry<Item> registry =  Registries.ITEM;
+        HashMap<Integer, JSONObject> jsonMap = new HashMap<>() ;
+        server.getResourceManager().findAllResources("alchemy", I -> true).forEach((I,R) -> {
+            try {
+                JSONTokener reader =  new JSONTokener(R.getFirst().getReader());
+                JSONObject json =  new JSONObject(reader);
+                jsonMap.put(json.getInt("priority"), json.getJSONObject("ingredients"));
+                reader.close();
+            } catch (IOException e) {
+                AlchemicalInfusions.LOGGER.error("Invalid format in: {}", I.toString());
+            }
+        });
+        HashMap<String, JSONObject> idMap = new HashMap<>();
+        jsonMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(entry -> {
+            entry.getValue().keySet().forEach(key -> idMap.put(key, entry.getValue().getJSONObject(key)));
+        });
+        idMap.forEach((id, effects)-> {
+            ArrayList<StatusEffectInstance> list = new ArrayList<>();
+            effects.keySet().forEach(key -> list.add(new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(Identifier.of(key)).get(),effects.getInt(key))));
+            addEffects(registry.get(Identifier.of(id)), list.toArray(new StatusEffectInstance[0]));
+        });
+
+
+
+//        while ((line = reader.readLine()) != null) {
+//            segments = line.split(",");
+//
+//        }
+
     }
 
     public static <T> void addComponents(Item item, ComponentType<T> component, @Nullable T value) {
