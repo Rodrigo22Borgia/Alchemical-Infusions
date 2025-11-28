@@ -1,10 +1,8 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
-import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.InfusionEntity;
-import com.rodrigo.items.InfusionMap;
-import net.fabricmc.fabric.impl.item.EnchantmentUtil;
+import com.rodrigo.data.InfusionMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -18,12 +16,10 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.PotionItem;
-import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.server.command.EnchantCommand;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;

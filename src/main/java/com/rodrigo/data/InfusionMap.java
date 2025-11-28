@@ -1,4 +1,4 @@
-package com.rodrigo.items;
+package com.rodrigo.data;
 
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.effect.StatusEffect;
