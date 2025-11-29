@@ -63,7 +63,7 @@ public class AlchemyBlock extends BlockWithEntity  {
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (!(world.getBlockEntity(pos) instanceof final AlchemyEntity entity)) {
-            return ActionResult.PASS;
+            return ActionResult.CONSUME;
         }
         final ItemStack inHand = player.getMainHandStack();
 
@@ -71,7 +71,7 @@ public class AlchemyBlock extends BlockWithEntity  {
         switch ((int) (hit.getPos().y % 1 * 1000)) {
             case 281-> {
                 if (!entity.itemAssign(0, player, I -> {Item item = I.getItem();
-                    return item == Items.GLASS_BOTTLE || item == _ItemRegistry.splash_bottle || item == _ItemRegistry.lingering_bottle || item == Items.ARROW || item instanceof PotionItem;})) {return ActionResult.PASS;}
+                    return item == Items.GLASS_BOTTLE || item == _ItemRegistry.splash_bottle || item == _ItemRegistry.lingering_bottle || item == Items.ARROW || item instanceof PotionItem;})) {return ActionResult.CONSUME;}
                 ItemStack inSlot = entity.getStack(0);
                 int slotCount = inSlot.getCount();
                 if (slotCount > 1) {
@@ -83,19 +83,19 @@ public class AlchemyBlock extends BlockWithEntity  {
                 }
                 world.setBlockState(pos, state.with(BREW , !entity.getStack(0).isEmpty()));}
             case 62 -> {
-                if (!entity.itemAssign(1, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null)) {return ActionResult.PASS;}
+                if (!entity.itemAssign(1, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null)) {return ActionResult.CONSUME;}
                 world.setBlockState(pos, state.with(SLOT1, !entity.getStack(1).isEmpty()));}
             case 56 -> {
-                if (!entity.itemAssign(2, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null)) {return ActionResult.PASS;}
+                if (!entity.itemAssign(2, player, I -> I.getItem() != Items.TIPPED_ARROW && test != null)) {return ActionResult.CONSUME;}
                 world.setBlockState(pos, state.with(SLOT2, !entity.getStack(2).isEmpty()));}
             case 50 -> {
                 if (player.getMainHandStack().getItem() == Items.FLINT_AND_STEEL) {
                     inHand.damage(1, player);
                     world.playSound(null, pos, SoundEvents.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS);
                     return brewPotion(entity, world, pos, state);}
-                if (!entity.itemAssign(3, player, I -> I.getItem() == Items.STICK)) {return ActionResult.PASS;}
+                if (!entity.itemAssign(3, player, I -> I.getItem() == Items.STICK)) {return ActionResult.CONSUME;}
                 world.setBlockState(pos, state.with(FUEL , !entity.getStack(3).isEmpty()));}
-            default -> {return ActionResult.PASS;}
+            default -> {return ActionResult.CONSUME;}
         }
 
         world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
@@ -107,7 +107,7 @@ public class AlchemyBlock extends BlockWithEntity  {
     private static ActionResult brewPotion(AlchemyEntity entity, World world, BlockPos pos, BlockState state) {
         final ItemStack fuel = entity.getStack(3);
         if (fuel.getItem() != Items.STICK) {
-            return ActionResult.PASS;
+            return ActionResult.CONSUME;
         }
         final ItemStack brew;
         final ItemStack slot0 = entity.getStack(0);
@@ -141,33 +141,33 @@ public class AlchemyBlock extends BlockWithEntity  {
             brew.set(DataComponentTypes.CUSTOM_NAME, Text.of("§bAlchemical Brew"));
         }
 //Tipping
-        if (item0 == Items.ARROW) {if (!tip_arrow(item1, item2, brew, entity, ingredient1, ingredient2)) {return ActionResult.PASS;}}
+        if (item0 == Items.ARROW) {if (!tip_arrow(item1, item2, brew, entity, ingredient1, ingredient2)) {return ActionResult.CONSUME;}}
         else if (item0 == Items.GLASS_BOTTLE || item0 == _ItemRegistry.splash_bottle || item0 == _ItemRegistry.lingering_bottle) {
 //COMBINATION
             if (item1 instanceof PotionItem && item2 instanceof PotionItem) {
                 if (component1 == null || component2 == null) {
-                    return ActionResult.PASS;
+                    return ActionResult.CONSUME;
                 }
                 combine(brew, entity, ingredient1, ingredient2);
 //CREATION
             } else if (!ingredient1.isEmpty() && !ingredient2.isEmpty() && item1 != item2) {
                 createPotion(brew, slot1, slot2, ingredient1, ingredient2);
 
-            } else {return ActionResult.PASS;}
+            } else {return ActionResult.CONSUME;}
         }
 
         else if (item0 instanceof PotionItem) {
 //PROLONGATION
             final PotionContentsComponent component = slot0.get(DataComponentTypes.POTION_CONTENTS);
             if (component == null) {
-                return ActionResult.PASS;
+                return ActionResult.CONSUME;
             }
 
             if (!prolongation(brew, item1, item2, component, ingredient1, ingredient2, slot1, slot2)) {
 //DISTILLATION
                 distill(brew, component);
             }
-        } else {return ActionResult.PASS;}
+        } else {return ActionResult.CONSUME;}
 
         entity.setStack(0, brew);
         fuel.decrement(1);

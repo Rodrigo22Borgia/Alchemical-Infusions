@@ -8,6 +8,7 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
@@ -23,22 +24,23 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import oshi.util.tuples.Pair;
 
 import java.io.IOException;
 import java.util.*;
 
 public class ResourceReader {
     public static void readResources(MinecraftServer server) {
-        HashMap<Integer, JSONObject> packMap = new HashMap<>();
+        HashMap<Integer, Pair<Identifier, JSONObject>> packMap = new HashMap<>();
         //Read all resources
         server.getResourceManager().findAllResources("alchemy", I -> I.getPath().equals("alchemy/infusions.json")).forEach((I, R) -> {
             try {
                 JSONTokener reader =  new JSONTokener(R.getFirst().getReader());
                 JSONObject json =  new JSONObject(reader);
-                packMap.put(json.getInt("priority"), json);
+                packMap.put(json.getInt("priority"), new Pair<>(I,json));
                 reader.close();
-            } catch (IOException e) {
-                AlchemicalInfusions.LOGGER.error("Invalid format in: {}", I.toString());
+            } catch (Exception e) {
+                AlchemicalInfusions.LOGGER.error("Invalid format in \"{}\": {}", I.toString(), e.getMessage());
             }
         });
 
@@ -47,12 +49,16 @@ public class ResourceReader {
         HashMap<String, JSONObject> ingredientMap = new HashMap<>();
         //Sort by priority & map IDs
         packMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(entry -> {
-            JSONObject ingredients = entry.getValue().getJSONObject("ingredients");
-            ingredients.keySet().forEach(key -> ingredientMap.put(key, ingredients.getJSONObject(key)));
-            JSONObject enchants = entry.getValue().getJSONObject("enchantments");
-            enchants.keySet().forEach(key -> enchantMap.put(key, enchants.getJSONArray(key)));
-            JSONObject catalysts = entry.getValue().getJSONObject("catalysts");
-            catalysts.keySet().forEach(key -> catalystMap.put(key, catalysts.getJSONArray(key)));
+            try {
+                JSONObject ingredients = entry.getValue().getB().getJSONObject("ingredients");
+                ingredients.keySet().forEach(key -> ingredientMap.put(key, ingredients.getJSONObject(key)));
+                JSONObject enchants = entry.getValue().getB().getJSONObject("enchantments");
+                enchants.keySet().forEach(key -> enchantMap.put(key, enchants.getJSONArray(key)));
+                JSONObject catalysts = entry.getValue().getB().getJSONObject("catalysts");
+                catalysts.keySet().forEach(key -> catalystMap.put(key, catalysts.getJSONArray(key)));
+            } catch (Exception e){
+                AlchemicalInfusions.LOGGER.error("Invalid format in \"{}\": {}", entry.getValue().getA(), e.getMessage());
+            }
         });
         Registry<Enchantment> registry = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
 
@@ -69,10 +75,12 @@ public class ResourceReader {
 
             RegistryKey<Enchantment>[] array = new RegistryKey[enchants.length()];
             for (int i = 0; i < enchants.length(); i++) {
-                array[i] = registryEnchant.getKey(registryEnchant.get(Identifier.of(enchants.getString(i)))).get();
-
-                RegistryEntry<Enchantment> e = registryEnchant.getEntry(registryEnchant.get(array[i]));
-                lore = lore.with(Enchantment.getName(e, e.value().getMaxLevel()).copy().setStyle(Style.EMPTY.withColor(Formatting.GRAY).withItalic(false)));
+                java.util.Optional<net.minecraft.registry.RegistryKey<Enchantment>> test = registryEnchant.getKey(registryEnchant.get(Identifier.of(enchants.getString(i))));
+                if (test.isPresent()) {
+                    array[i] = test.get();
+                    RegistryEntry<Enchantment> e = registryEnchant.getEntry(registryEnchant.get(array[i]));
+                    lore = lore.with(Enchantment.getName(e, e.value().getMaxLevel()).copy().setStyle(Style.EMPTY.withColor(Formatting.GRAY).withItalic(false)));
+                }
             }
 
             Item item = Registries.ITEM.get(Identifier.of(itemID));
@@ -95,9 +103,9 @@ public class ResourceReader {
     private static void readIngredients(HashMap<String, JSONObject> idMap) {
         //Add merged maps effects to items
         Registry<Item> registry =  Registries.ITEM;
-        idMap.forEach((id, effects)-> {
+        idMap.forEach((id, effects) -> {
             ArrayList<StatusEffectInstance> list = new ArrayList<>();
-            effects.keySet().forEach(key -> list.add(new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(Identifier.of(key)).get(),effects.getInt(key))));
+            effects.keySet().forEach(key -> Registries.STATUS_EFFECT.getEntry(Identifier.of(key)).ifPresent(statusEffectReference -> list.add(new StatusEffectInstance(statusEffectReference, effects.getInt(key)))));
             addEffects(registry.get(Identifier.of(id)), list.toArray(new StatusEffectInstance[0]));
         });
     }

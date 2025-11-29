@@ -52,13 +52,13 @@ public class InfusionAnvil extends BlockWithEntity {
 
     @Override
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!(world.getBlockEntity(pos) instanceof InfusionEntity entity) || ((int) (hit.getPos().y % 1 * 1000)) != 687) {return ActionResult.PASS;}
+        if (!(world.getBlockEntity(pos) instanceof InfusionEntity entity) || ((int) (hit.getPos().y % 1 * 1000)) != 687) {return ActionResult.CONSUME;}
         if (entity.itemAssign(0, player, I -> I.isEnchantable() || I.hasEnchantments())) {
             world.playSound(null, pos, SoundEvents.ENTITY_GLOW_ITEM_FRAME_ADD_ITEM, SoundCategory.BLOCKS, 0.3f, 1f);
             return ActionResult.SUCCESS;
         }
         final ItemStack stack = entity.getStack(0);
-        if (stack.isEmpty()) {return ActionResult.PASS;}
+        if (stack.isEmpty()) {return ActionResult.CONSUME;}
         final ItemStack hand  = player.getMainHandStack();
         final RegistryKey<Enchantment>[] catalyst  = AlchemicalInfusions.CATALYST_MAP.get(hand.getItem());
 
@@ -93,7 +93,7 @@ public class InfusionAnvil extends BlockWithEntity {
                 world.playSound(null, pos, SoundEvents.BLOCK_SMITHING_TABLE_USE, SoundCategory.BLOCKS, 0.3f, 1f);
             }
         }
-        return ActionResult.PASS;
+        return ActionResult.CONSUME;
     }
 
     @Override
