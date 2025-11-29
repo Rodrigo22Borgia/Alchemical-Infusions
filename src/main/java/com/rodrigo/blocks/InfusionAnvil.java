@@ -1,6 +1,7 @@
 package com.rodrigo.blocks;
 
 import com.mojang.serialization.MapCodec;
+import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.InfusionEntity;
 import com.rodrigo.data.InfusionMap;
 import net.minecraft.block.Block;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class InfusionAnvil extends BlockWithEntity {
     private static final VoxelShape[] SHAPE = new VoxelShape[4];
     private static final EnumProperty<Direction> FACING = Properties.HORIZONTAL_FACING;
-    private static final RegistryKey<Enchantment>[] EMPTY = new RegistryKey[0];
+    private static final Enchantment[] EMPTY = new Enchantment[0];
 
     public InfusionAnvil(Settings settings) {
         super(settings);
@@ -65,14 +66,13 @@ public class InfusionAnvil extends BlockWithEntity {
         if (player.getMainHandStack().getItem() instanceof PotionItem) {
             player.setStackInHand(Hand.MAIN_HAND, Items.GLASS_BOTTLE.getDefaultStack());
 
-            final ArrayList<RegistryKey<Enchantment>> list = new ArrayList<>();
-            hand.getComponents().get(DataComponentTypes.POTION_CONTENTS).getEffects().forEach(e -> java.util.Collections.addAll(list, InfusionMap.MAP.getOrDefault(e.getEffectType(), EMPTY)));
+            final ArrayList<Enchantment> list = new ArrayList<>();
+            hand.getComponents().get(DataComponentTypes.POTION_CONTENTS).getEffects().forEach(e -> java.util.Collections.addAll(list, AlchemicalInfusions.INFUSION_MAP.getOrDefault(e.getEffectType(), EMPTY)));
             Registry<Enchantment> registry = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
 
-            for (RegistryKey<Enchantment> enchant : list) {
-                Enchantment e = registry.get(enchant);
-                if (e.isAcceptableItem(stack)) {
-                    stack.addEnchantment(registry.getEntry(e), 1);
+            for (Enchantment enchant : list) {
+                if (enchant.isAcceptableItem(stack)) {
+                    stack.addEnchantment(registry.getEntry(enchant), 1);
                 }
             }
             world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.3f, 0.5f);

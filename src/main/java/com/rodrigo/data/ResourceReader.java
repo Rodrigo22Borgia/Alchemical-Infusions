@@ -13,12 +13,14 @@ import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Style;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -47,42 +49,53 @@ public class ResourceReader {
     }
 
     public static void readResources(MinecraftServer server) {
+        HashMap<Integer, JSONObject> packMap = new HashMap<>();
         //Read all resources
-        HashMap<Integer, JSONObject> catalystMap = new HashMap<>();
-        HashMap<Integer, JSONObject> enchantMap = new HashMap<>();
-        HashMap<Integer, JSONObject> ingredientMap = new HashMap<>();
         server.getResourceManager().findAllResources("alchemy", I -> I.getPath().equals("alchemy/infusions.json")).forEach((I, R) -> {
             try {
                 JSONTokener reader =  new JSONTokener(R.getFirst().getReader());
                 JSONObject json =  new JSONObject(reader);
-                ingredientMap.put(json.getInt("priority"), json.getJSONObject("ingredients"));
-                enchantMap   .put(json.getInt("priority"), json.getJSONObject("enchantments"));
-                catalystMap  .put(json.getInt("priority"), json.getJSONObject("catalysts"));
+                packMap.put(json.getInt("priority"), json);
                 reader.close();
             } catch (IOException e) {
                 AlchemicalInfusions.LOGGER.error("Invalid format in: {}", I.toString());
             }
         });
+
+        HashMap<String, JSONArray> catalystMap = new HashMap<>();
+        HashMap<String, JSONArray> enchantMap = new HashMap<>();
+        HashMap<String, JSONObject> ingredientMap = new HashMap<>();
+        //Sort by priority & map IDs
+        packMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(entry -> {
+            JSONObject ingredients = entry.getValue().getJSONObject("ingredients");
+            ingredients.keySet().forEach(key -> ingredientMap.put(key, ingredients.getJSONObject(key)));
+            JSONObject enchants = entry.getValue().getJSONObject("enchantments");
+            enchants.keySet().forEach(key -> enchantMap.put(key, enchants.getJSONArray(key)));
+            JSONObject catalysts = entry.getValue().getJSONObject("catalysts");
+            catalysts.keySet().forEach(key -> catalystMap.put(key, catalysts.getJSONArray(key)));
+        });
         readIngredients(ingredientMap);
-        readEnchants(enchantMap);
-        readCatalysts(catalystMap);
+        readEnchants   (enchantMap, server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT));
+
+        Registry<Enchantment> registry = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
+
     }
 
     private static void readCatalysts(HashMap<Integer, JSONObject> catalystMap) {
     }
 
-    private static void readEnchants(HashMap<Integer, JSONObject> enchantMap) {
-//        enchantMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(
-//                entry -> entry.getValue().keySet().forEach(key->))
+    private static void readEnchants(HashMap<String, JSONArray> idMap, Registry<Enchantment> registryEnchant) {
+        AlchemicalInfusions.INFUSION_MAP = new HashMap<>();
+        idMap.forEach((effect, enchants) -> {
+            Enchantment[] array = new Enchantment[enchants.length()];
+            for (int i = 0; i < enchants.length(); i++) {
+                array[i] = registryEnchant.get(Identifier.of(enchants.getString(i)));
+            }
+            AlchemicalInfusions.INFUSION_MAP.put(Registries.STATUS_EFFECT.getEntry(Registries.STATUS_EFFECT.get(Identifier.of(effect))), array);
+        });
     }
 
-    private static void readIngredients(HashMap<Integer, JSONObject> ingredientMap) {
-        //Sort by priority
-        HashMap<String, JSONObject> idMap = new HashMap<>();
-        ingredientMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(
-                //Merge into single map of ID : EFFECTS
-                entry -> entry.getValue().keySet().forEach(key -> idMap.put(key, entry.getValue().getJSONObject(key))));
-
+    private static void readIngredients(HashMap<String, JSONObject> idMap) {
         //Add merged maps effects to items
         Registry<Item> registry =  Registries.ITEM;
         idMap.forEach((id, effects)-> {
@@ -90,13 +103,6 @@ public class ResourceReader {
             effects.keySet().forEach(key -> list.add(new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(Identifier.of(key)).get(),effects.getInt(key))));
             addEffects(registry.get(Identifier.of(id)), list.toArray(new StatusEffectInstance[0]));
         });
-
-        //Add hardcoded effects, unless overwritten
-//        Ingredients.MAP.forEach((item, effects) -> {
-//            if (!idMap.containsKey(registry.getId(item).toString())) {
-//                addEffects(item, effects);
-//            }
-//        });
     }
 
     public static <T> void addComponents(Item item, ComponentType<T> component, @Nullable T value) {
