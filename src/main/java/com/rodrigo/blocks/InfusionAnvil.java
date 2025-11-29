@@ -3,7 +3,6 @@ package com.rodrigo.blocks;
 import com.mojang.serialization.MapCodec;
 import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.InfusionEntity;
-import com.rodrigo.data.InfusionMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -61,7 +60,7 @@ public class InfusionAnvil extends BlockWithEntity {
         final ItemStack stack = entity.getStack(0);
         if (stack.isEmpty()) {return ActionResult.PASS;}
         final ItemStack hand  = player.getMainHandStack();
-        final RegistryKey<Enchantment>[] catalyst  = InfusionMap.CATALYSTS.get(hand.getItem());
+        final RegistryKey<Enchantment>[] catalyst  = AlchemicalInfusions.CATALYST_MAP.get(hand.getItem());
 
         if (player.getMainHandStack().getItem() instanceof PotionItem) {
             player.setStackInHand(Hand.MAIN_HAND, Items.GLASS_BOTTLE.getDefaultStack());

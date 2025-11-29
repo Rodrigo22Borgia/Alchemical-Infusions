@@ -28,26 +28,6 @@ import java.io.IOException;
 import java.util.*;
 
 public class ResourceReader {
-    private static void addEffects(final Item ingredient, final StatusEffectInstance... effects) {
-        PotionContentsComponent components = PotionContentsComponent.DEFAULT;
-        for (final StatusEffectInstance effect : effects) {
-            components = components.with(effect);
-        }
-        addComponents(ingredient, DataComponentTypes.POTION_CONTENTS, components);
-    }
-
-    @SafeVarargs
-    public static void addCatalysts(Registry<Enchantment> registry, Item item, RegistryKey<Enchantment>... enchants) {
-        LoreComponent lore = LoreComponent.DEFAULT;
-
-        for (RegistryKey<Enchantment> enchant : enchants) {
-            RegistryEntry<Enchantment> e = registry.getEntry(registry.get(enchant));
-            lore = lore.with(Enchantment.getName(e, e.value().getMaxLevel()).copy().setStyle(Style.EMPTY.withColor(Formatting.GRAY).withItalic(false)));
-        }
-
-        addComponents(item, DataComponentTypes.LORE, lore);
-    }
-
     public static void readResources(MinecraftServer server) {
         HashMap<Integer, JSONObject> packMap = new HashMap<>();
         //Read all resources
@@ -74,14 +54,31 @@ public class ResourceReader {
             JSONObject catalysts = entry.getValue().getJSONObject("catalysts");
             catalysts.keySet().forEach(key -> catalystMap.put(key, catalysts.getJSONArray(key)));
         });
-        readIngredients(ingredientMap);
-        readEnchants   (enchantMap, server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT));
-
         Registry<Enchantment> registry = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
 
+        readIngredients(ingredientMap);
+        readEnchants   (enchantMap , registry);
+        readCatalysts  (catalystMap, registry);
     }
 
-    private static void readCatalysts(HashMap<Integer, JSONObject> catalystMap) {
+    private static void readCatalysts(HashMap<String, JSONArray> catalystMap, Registry<Enchantment> registryEnchant) {
+        AlchemicalInfusions.CATALYST_MAP = new HashMap<>();
+
+        catalystMap.forEach((itemID, enchants)-> {
+            LoreComponent lore = LoreComponent.DEFAULT;
+
+            RegistryKey<Enchantment>[] array = new RegistryKey[enchants.length()];
+            for (int i = 0; i < enchants.length(); i++) {
+                array[i] = registryEnchant.getKey(registryEnchant.get(Identifier.of(enchants.getString(i)))).get();
+
+                RegistryEntry<Enchantment> e = registryEnchant.getEntry(registryEnchant.get(array[i]));
+                lore = lore.with(Enchantment.getName(e, e.value().getMaxLevel()).copy().setStyle(Style.EMPTY.withColor(Formatting.GRAY).withItalic(false)));
+            }
+
+            Item item = Registries.ITEM.get(Identifier.of(itemID));
+            addComponents(item, DataComponentTypes.LORE, lore);
+            AlchemicalInfusions.CATALYST_MAP.put(item, array);
+        });
     }
 
     private static void readEnchants(HashMap<String, JSONArray> idMap, Registry<Enchantment> registryEnchant) {
@@ -103,6 +100,14 @@ public class ResourceReader {
             effects.keySet().forEach(key -> list.add(new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(Identifier.of(key)).get(),effects.getInt(key))));
             addEffects(registry.get(Identifier.of(id)), list.toArray(new StatusEffectInstance[0]));
         });
+    }
+
+    private static void addEffects(final Item ingredient, final StatusEffectInstance... effects) {
+        PotionContentsComponent components = PotionContentsComponent.DEFAULT;
+        for (final StatusEffectInstance effect : effects) {
+            components = components.with(effect);
+        }
+        addComponents(ingredient, DataComponentTypes.POTION_CONTENTS, components);
     }
 
     public static <T> void addComponents(Item item, ComponentType<T> component, @Nullable T value) {

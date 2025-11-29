@@ -164,6 +164,14 @@
     "minecraft:invisibility"       : ["minecraft:vanishing_curse"]
   },
   "catalysts": {
-    "minecraft:stone": ["minecraft:unbreaking", "minecraft:efficiency"]
+    "minecraft:obsidian"        : ["minecraft:unbreaking"],
+    "minecraft:amethyst_shard"  : ["minecraft:piercing"             , "minecraft:lure"              , "minecraft:depth_strider"   , "minecraft:fire_aspect"],
+    "minecraft:gold_ingot"      : ["minecraft:efficiency"           , "minecraft:smite"             , "minecraft:fire_protection" , "minecraft:quick_charge"],
+    "minecraft:emerald"         : ["minecraft:fortune"              , "minecraft:looting"           , "minecraft:luck_of_the_sea"],
+    "minecraft:prismarine_shard": ["minecraft:thorns"               , "minecraft:impaling"          , "minecraft:respiration"],
+    "minecraft:quartz"          : ["minecraft:sharpness"            , "minecraft:power"             , "minecraft:breach"          , "minecraft:soul_speed"   , "minecraft:swift_sneak"],
+    "minecraft:lapis_lazuli"    : ["minecraft:blast_protection"     , "minecraft:sweeping_edge"     , "minecraft:feather_falling"],
+    "minecraft:diamond"         : ["minecraft:protection"           , "minecraft:density"           , "minecraft:riptide"],
+    "minecraft:ender_pearl"     : ["minecraft:projectile_protection", "minecraft:bane_of_arthropods", "minecraft:loyalty"         , "minecraft:wind_burst"   , "minecraft:punch"       , "minecraft:knockback"]
   }
 }
