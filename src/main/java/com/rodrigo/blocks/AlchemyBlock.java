@@ -3,9 +3,12 @@ package com.rodrigo.blocks;
 import com.mojang.serialization.MapCodec;
 import com.rodrigo.AlchemicalInfusions;
 import com.rodrigo.entities.AlchemyEntity;
+import com.rodrigo.entities._EntityRegistry;
 import com.rodrigo.items._ItemRegistry;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.component.ComponentMap;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.PotionContentsComponent;
@@ -14,17 +17,23 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextContent;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -48,18 +57,20 @@ public class AlchemyBlock extends BlockWithEntity  {
         this.setDefaultState(getDefaultState().with(FUEL, false).with(BREW, false).with(SLOT1, false).with(SLOT2,false).with(LIT,false));
     }
 
-    /**
-     * Entity
-     */
-
     @Override
     public @Nullable BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
         return new AlchemyEntity(pos, state);
     }
 
-    /**
-     * Interactions
-     */
+    @Override
+    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
+        if (!state.get(LIT)) {return;}
+        world.playSoundAtBlockCenterClient(pos, SoundEvents.BLOCK_FURNACE_FIRE_CRACKLE, SoundCategory.BLOCKS, 1.0F, 1.2F, false);
+
+        world.addParticleClient(ParticleTypes.SMOKE, pos.getX()+0.75, pos.getY()+0.2, pos.getZ()+0.75, 0, 0, 0);
+        world.addParticleClient(ParticleTypes.FLAME, pos.getX()+0.75, pos.getY()+0.2, pos.getZ()+0.75, 0, 0, 0);
+    }
+
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (!(world.getBlockEntity(pos) instanceof final AlchemyEntity entity)) {
@@ -175,6 +186,7 @@ public class AlchemyBlock extends BlockWithEntity  {
         for (int i = 0; i < 4; i++) {
             state = state.with(PROPERTIES[i], !entity.getStack(i).isEmpty());
         }
+        state = state.with(LIT, true);
         world.setBlockState(pos, state);
         entity.markDirty();
         world.updateListeners(pos, state, state, 0);
