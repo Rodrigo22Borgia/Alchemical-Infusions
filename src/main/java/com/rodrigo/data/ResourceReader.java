@@ -49,15 +49,18 @@ public class ResourceReader {
         HashMap<String, JSONObject> ingredientMap = new HashMap<>();
         //Sort by priority & map IDs
         packMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).forEach(entry -> {
-            try {
-                JSONObject ingredients = entry.getValue().getB().getJSONObject("ingredients");
+            JSONObject object = entry.getValue().getB();
+            if (object.has("ingredients")) {
+                JSONObject ingredients = object.getJSONObject("ingredients");
                 ingredients.keySet().forEach(key -> ingredientMap.put(key, ingredients.getJSONObject(key)));
-                JSONObject enchants = entry.getValue().getB().getJSONObject("enchantments");
+            }
+            if (object.has("enchantments")) {
+                JSONObject enchants = object.getJSONObject("enchantments");
                 enchants.keySet().forEach(key -> enchantMap.put(key, enchants.getJSONArray(key)));
-                JSONObject catalysts = entry.getValue().getB().getJSONObject("catalysts");
+            }
+            if (object.has("catalysts")) {
+                JSONObject catalysts = object.getJSONObject("catalysts");
                 catalysts.keySet().forEach(key -> catalystMap.put(key, catalysts.getJSONArray(key)));
-            } catch (Exception e){
-                AlchemicalInfusions.LOGGER.error("Invalid format in \"{}\": {}", entry.getValue().getA(), e.getMessage());
             }
         });
         Registry<Enchantment> registry = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
