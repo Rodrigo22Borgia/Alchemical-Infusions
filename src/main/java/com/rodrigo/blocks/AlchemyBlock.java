@@ -63,6 +63,16 @@ public class AlchemyBlock extends BlockWithEntity  {
     }
 
     @Override
+    protected boolean hasRandomTicks(BlockState state) {
+        return state.get(LIT);
+    }
+
+    @Override
+    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        world.setBlockState(pos, state.with(LIT, false));
+    }
+
+    @Override
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (!state.get(LIT)) {return;}
         world.playSoundAtBlockCenterClient(pos, SoundEvents.BLOCK_FURNACE_FIRE_CRACKLE, SoundCategory.BLOCKS, 1.0F, 1.2F, false);
@@ -73,6 +83,7 @@ public class AlchemyBlock extends BlockWithEntity  {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        if (state.get(LIT)) {world.setBlockState(pos, state.with(LIT, false));} //This state change without client update confuses it enough to work
         if (!(world.getBlockEntity(pos) instanceof final AlchemyEntity entity)) {
             return ActionResult.CONSUME;
         }
@@ -186,8 +197,7 @@ public class AlchemyBlock extends BlockWithEntity  {
         for (int i = 0; i < 4; i++) {
             state = state.with(PROPERTIES[i], !entity.getStack(i).isEmpty());
         }
-        state = state.with(LIT, true);
-        world.setBlockState(pos, state);
+        world.setBlockState(pos, state.with(LIT, true));
         entity.markDirty();
         world.updateListeners(pos, state, state, 0);
         return ActionResult.SUCCESS;
@@ -335,11 +345,7 @@ public class AlchemyBlock extends BlockWithEntity  {
         return SHAPE;
     }
 
-    private static final HashMap<Item, StatusEffectInstance[]> INGREDIENT_MAP = new HashMap<>();
     static {
-        INGREDIENT_MAP.put(Items.APPLE, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.SATURATION, 1500), new StatusEffectInstance(StatusEffects.REGENERATION, 200)});
-        INGREDIENT_MAP.put(Items.SWEET_BERRIES, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.SATURATION, 200), new StatusEffectInstance(StatusEffects.ABSORPTION, 200)});
-        INGREDIENT_MAP.put(Items.GOLDEN_APPLE, new StatusEffectInstance[]{new StatusEffectInstance(StatusEffects.ABSORPTION, 500)});
 
         SHAPE = VoxelShapes.union(
                 VoxelShapes.cuboid(0.0625, 0, 0.3125, 0.4375, 0.05625, 0.6875),
