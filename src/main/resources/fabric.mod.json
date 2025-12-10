@@ -3,9 +3,9 @@
 	"id": "alchemical-infusions",
 	"version": "${version}",
 	"name": "Alchemical Infusions",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Redesign of alchemy & enchanting in minecraft",
 	"authors": [
-		"Me!"
+		"Rodrigo__Borgia"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
@@ -33,8 +33,8 @@
 		}
 	],
 	"depends": {
-		"fabricloader": ">=0.17.3",
-		"minecraft": "~1.21.10",
+      "fabricloader": ">=0.18.2",
+      "minecraft": "~1.21.9",
 		"java": ">=21",
 		"fabric-api": "*"
 	},
